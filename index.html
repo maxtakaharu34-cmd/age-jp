@@ -41,11 +41,11 @@ video,canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;t
 <meta property="og:title" content="お前の年齢は？">
 <meta property="og:description" content="カメラでネタAI年齢診断！シェアして遊ぼう">
 <meta property="og:url" content="https://maxtakaharu34-cmd.github.io/age-jp/">
-<meta property="og:image" content="og.svg">
+<meta property="og:image" content="og.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="お前の年齢は？">
 <meta name="twitter:description" content="カメラでネタAI年齢診断！シェアして遊ぼう">
-<meta name="twitter:image" content="og.svg">
+<meta name="twitter:image" content="og.png">
 <!-- spark-og-v1 -->
 </head>
 <body>
@@ -61,8 +61,7 @@ video,canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;t
   </div>
 </div>
 <div class="actions">
-  <button id="btn-start">📷 カメラ起動</button>
-  <button id="btn-shoot" disabled>🔍 診断する</button>
+  <button id="btn-go">📷 タップして診断！</button>
   <button id="btn-share" class="share" disabled>🔗 シェア</button>
 </div>
 <div class="note">※ネタ用フェイク診断。実年齢じゃないよ<br/>画像は端末内処理のみ・送信なし</div>
@@ -85,12 +84,25 @@ async function startCam(){
     stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:480,height:640},audio:false});
     vid.srcObject=stream;
     await vid.play();
-    $('btn-shoot').disabled=false;
-    $('btn-start').disabled=true;
-    $('btn-start').textContent='✓ 起動済';
+    return true;
   }catch(e){
     err.textContent='カメラ起動失敗: '+e.message;err.classList.add('show');
+    return false;
   }
+}
+// Single-button flow: first tap starts camera AND immediately diagnoses; subsequent taps re-diagnose.
+async function go(){
+  const btn=$('btn-go');
+  if(!stream){
+    btn.textContent='📷 起動中…';btn.disabled=true;
+    const ok=await startCam();
+    btn.disabled=false;
+    if(!ok){btn.textContent='📷 タップして診断！';return}
+    // brief pause to let camera stabilize
+    await new Promise(r=>setTimeout(r,400));
+  }
+  btn.textContent='🔄 もう一度診断';
+  diagnose();
 }
 function diagnose(){
   if(!stream)return;
@@ -117,8 +129,7 @@ function diagnose(){
 let ac=null;const en=()=>{if(!ac)ac=new(window.AudioContext||window.webkitAudioContext)();if(ac.state==='suspended')ac.resume();return ac};
 const beep=(f,d,t='square',g=.1)=>{const a=en();const o=a.createOscillator();const gn=a.createGain();o.type=t;o.frequency.value=f;gn.gain.value=g;gn.gain.exponentialRampToValueAtTime(.0001,a.currentTime+d);o.connect(gn).connect(a.destination);o.start();o.stop(a.currentTime+d)};
 const fanfare=()=>{[523,659,784,1047].forEach((f,i)=>setTimeout(()=>beep(f,.18,'triangle',.15),i*100))};
-$('btn-start').addEventListener('click',()=>{en();startCam()});
-$('btn-shoot').addEventListener('click',()=>{en();diagnose()});
+$('btn-go').addEventListener('click',()=>{en();go()});
 $('btn-share').addEventListener('click',()=>{
   if(lastAge==null)return;
   const txt=`AI診断したら【${lastAge}歳】って言われた！「${lastCmt}」 #お前の年齢は`;
